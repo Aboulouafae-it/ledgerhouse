@@ -29,20 +29,20 @@ The application is local-first: financial data is stored in a local SQLite datab
 
 ## Screenshots
 
- Dashboard
-![Dashboard](docs/assets/screenshots/dashboard.png)
-
- Debts
-![Debts](docs/assets/screenshots/debts.png)
-
- Login
+ ### Login
 ![Login](docs/assets/screenshots/login.png)
 
- PDF Report
-![PDF Report](docs/assets/screenshots/pdf-report.png)
+### Dashboard
+![Dashboard](docs/assets/screenshots/dashboard.png)
 
- Shared Living
+### Debts
+![Debts](docs/assets/screenshots/debts.png)
+
+### Shared Living
 ![Shared Living](docs/assets/screenshots/shared-living.png)
+
+### PDF Report
+![PDF Report](docs/assets/screenshots/pdf-report.png)
 
 ## Demo
 
@@ -165,6 +165,10 @@ See [CLAUDE.md](CLAUDE.md).
 ## Contributing
 
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request.
+
+## Current Status
+
+Personal Ledger Pro is currently in alpha stage. Core local accounting, shared-living expense management, people management, login protection, PDF reporting, backup/restore, and database checks are implemented. The project is under active development, and future releases will improve packaging, testing, recurring payments, encrypted backups, and multi-currency support.
 
 ## Security
 
