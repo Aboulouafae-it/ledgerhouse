@@ -28,7 +28,13 @@ Full reports combine personal transactions, debts, shared living activity, and s
 
 ## Report Identity Settings
 
-Report identity settings can include owner name, title text, footer text, and other persisted settings. These values may reveal private information and should be anonymized in public examples.
+Report identity settings can include owner name, logo path, title text, footer text, and other persisted settings. The owner name is synchronized to a real `Person` record and stored through `owner_person_id`.
+
+The PDF header uses the project logo, report title, owner, period, and generation time. These values may reveal private information and should be anonymized in public examples.
+
+## Shared Living Totals
+
+Shared living report sections can show all participants and settlement suggestions. Dashboard and full-report summary totals use the current owner person's shared living balance, so the personal summary reflects what the owner should collect or pay.
 
 ## Screenshot and Report Export Location Placeholders
 

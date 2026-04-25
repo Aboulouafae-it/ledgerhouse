@@ -37,11 +37,29 @@ python -m app.main
 pytest
 ```
 
+## Local Desktop Install
+
+Install the launcher for the current Linux user:
+
+```bash
+install -D -m 755 packaging/linux/personal-ledger-pro ~/.local/bin/personal-ledger-pro
+install -D -m 644 packaging/linux/personal-ledger-pro.desktop ~/.local/share/applications/personal-ledger-pro.desktop
+update-desktop-database ~/.local/share/applications || true
+```
+
+Run the installed launcher:
+
+```bash
+personal-ledger-pro
+```
+
 ## Coding Rules
 
 - Keep business logic in services.
 - Keep database access in repositories.
 - Keep UI files focused on presentation.
+- Keep owner/person synchronization in services.
+- Treat the owner as a normal `Person` in shared living calculations.
 - Never store plaintext passwords.
 - Never use float for money.
 - Do not hard delete financial records.

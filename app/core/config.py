@@ -9,6 +9,8 @@ DATA_DIR = BASE_DIR / "data"
 BACKUP_DIR = BASE_DIR / "backups"
 ASSETS_DIR = BASE_DIR / "app" / "assets"
 STYLES_DIR = ASSETS_DIR / "styles"
+ICONS_DIR = ASSETS_DIR / "icons"
+APP_LOGO_PATH = ICONS_DIR / "personal-ledger-pro.png"
 
 
 @dataclass(frozen=True)
@@ -28,4 +30,3 @@ config = AppConfig()
 def ensure_app_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-

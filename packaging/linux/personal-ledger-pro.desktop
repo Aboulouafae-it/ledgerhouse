@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Personal Ledger Pro
+Comment=Local-first personal finance, debt, and shared living expense manager
+Exec=/home/emorphi/.local/bin/personal-ledger-pro
+Icon=/home/emorphi/Documents/bedgite MoWaf/finance_manager/app/assets/icons/personal-ledger-pro.png
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true

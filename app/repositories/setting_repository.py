@@ -24,7 +24,7 @@ class SettingRepository:
             setting.updated_at = datetime.utcnow()
         else:
             self.session.add(AppSetting(key=key, value=value, value_type=value_type))
+        self.session.flush()
 
     def all_settings(self) -> dict[str, str]:
         return {setting.key: setting.value for setting in self.session.scalars(select(AppSetting))}
-

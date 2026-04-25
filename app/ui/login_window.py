@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
+from app.core.config import APP_LOGO_PATH
 from app.core.database import session_scope
+from app.core.i18n import apply_translations
 from app.services.auth_service import AuthService
 from app.ui.widgets import PrimaryButton
 
@@ -14,6 +17,8 @@ class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Personal Ledger Pro - Login")
+        if APP_LOGO_PATH.exists():
+            self.setWindowIcon(QIcon(str(APP_LOGO_PATH)))
         self.setObjectName("loginWindow")
         self.resize(1120, 760)
         root = QVBoxLayout(self)
@@ -39,9 +44,13 @@ class LoginWindow(QWidget):
         logo_wrap.setObjectName("loginLogoRing")
         logo_layout = QVBoxLayout(logo_wrap)
         logo_layout.setContentsMargins(0, 0, 0, 0)
-        logo = QLabel("PL")
+        logo = QLabel()
         logo.setObjectName("loginLogo")
         logo.setAlignment(Qt.AlignCenter)
+        if APP_LOGO_PATH.exists():
+            logo.setPixmap(QPixmap(str(APP_LOGO_PATH)).scaled(66, 66, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            logo.setText("PL")
         logo_layout.addWidget(logo)
         title = QLabel("Personal Ledger Pro")
         title.setObjectName("loginTitle")
@@ -92,6 +101,7 @@ class LoginWindow(QWidget):
         shell_layout.addWidget(footer, 0, Qt.AlignCenter)
         root.addWidget(shell, 1)
         self._load_remembered_username()
+        apply_translations(self)
 
     def _field(self, icon: str, input_widget: QLineEdit, action: QPushButton | None = None) -> QFrame:
         frame = QFrame()

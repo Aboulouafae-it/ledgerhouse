@@ -9,6 +9,12 @@ QMainWindow, QWidget {
     color: #F9FAFB;
 }
 
+QLabel,
+QCheckBox,
+QRadioButton {
+    background: transparent;
+}
+
 QFrame#sidebar {
     background: #070B13;
     border-right: 1px solid #1F2937;
@@ -16,6 +22,7 @@ QFrame#sidebar {
 
 QLabel#brandTitle {
     color: #F9FAFB;
+    background: transparent;
     font-size: 22px;
     font-weight: 800;
 }
@@ -32,6 +39,7 @@ QLabel#emptyMessage {
 
 QLabel#pageTitle {
     color: #F9FAFB;
+    background: transparent;
     font-size: 28px;
     font-weight: 800;
 }
@@ -42,12 +50,14 @@ QLabel#pageSubtitle {
 
 QLabel#sectionTitle {
     color: #F9FAFB;
+    background: transparent;
     font-size: 17px;
     font-weight: 750;
 }
 
 QLabel#dialogTitle {
     color: #F9FAFB;
+    background: transparent;
     font-size: 20px;
     font-weight: 800;
 }
@@ -61,6 +71,7 @@ QLabel#statTitle {
 QLabel#statValue {
     font-size: 25px;
     font-weight: 800;
+    background: transparent;
 }
 
 QLabel#emptyTitle {
@@ -336,12 +347,14 @@ QLabel#loginLogo {
 
 QLabel#loginTitle {
     color: #F9FAFB;
+    background: transparent;
     font-size: 28px;
     font-weight: 900;
 }
 
 QLabel#loginSubtitle {
     color: #9CA3AF;
+    background: transparent;
     font-size: 14px;
 }
 
@@ -397,9 +410,8 @@ QPushButton#loginButton {
 
 QLabel#securityNote {
     color: #86EFAC;
-    background: rgba(20, 83, 45, 72);
-    border: 1px solid rgba(34, 197, 94, 76);
-    border-radius: 9px;
+    background: transparent;
+    border: none;
     padding: 9px 10px;
 }
 
@@ -410,9 +422,8 @@ QLabel#loginFooter {
 
 QLabel#loginError {
     color: #FECACA;
-    background: rgba(127, 29, 29, 90);
-    border: 1px solid rgba(248, 113, 113, 88);
-    border-radius: 9px;
+    background: transparent;
+    border: none;
     padding: 9px 10px;
 }
 

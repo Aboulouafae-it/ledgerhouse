@@ -16,6 +16,10 @@ htmlcov/
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.sqlite3-wal
+data/*.sqlite3-shm
 *.db-wal
 *.db-shm
 backups/

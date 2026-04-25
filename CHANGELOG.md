@@ -16,3 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - PDF reports.
 - Settings center.
 - SQLite local database.
+- Owner identity synchronized to a real person record.
+- Shared living owner balances reflected in dashboard and reports.
+- English, Italian, and Arabic language settings.
+- Branded app logo and improved PDF report header.

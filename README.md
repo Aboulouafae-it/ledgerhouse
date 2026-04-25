@@ -18,10 +18,12 @@ The application is local-first: financial data is stored in a local SQLite datab
 - Personal income and expense tracking.
 - Debt tracking with creditors, debtors, and partial payments.
 - Shared living expense splits and settlement suggestions.
-- People management for creditors, debtors, and shared living members.
-- PDF financial reports.
+- People management for creditors, debtors, shared living members, and the current app owner.
+- Owner identity stored as a real `Person` record through `owner_person_id`.
+- PDF financial reports with a branded header and app logo.
 - Login protection with local credentials.
-- Settings center for app, report, people, category, payment, backup, and appearance options.
+- Settings center for app, language, report, people, category, payment, backup, and appearance options.
+- English, Italian, and Arabic interface language options.
 - Backup and restore workflows.
 - Database integrity checks.
 
@@ -52,8 +54,8 @@ sudo apt install -y python3 python3-venv python3-pip libxcb-cursor0
 Clone the repository and enter the project directory:
 
 ```bash
-git clone https://github.com/your-org/personal-ledger-pro.git
-cd personal-ledger-pro
+git clone https://github.com/Aboulouafae-it/ledgerhouse.git
+cd ledgerhouse
 ```
 
 Create a virtual environment and install dependencies:
@@ -77,6 +79,22 @@ Run tests:
 
 ```bash
 pytest
+```
+
+## Installing Locally on Linux
+
+The repository includes a lightweight Linux launcher and desktop entry under `packaging/linux/`.
+
+```bash
+install -D -m 755 packaging/linux/personal-ledger-pro ~/.local/bin/personal-ledger-pro
+install -D -m 644 packaging/linux/personal-ledger-pro.desktop ~/.local/share/applications/personal-ledger-pro.desktop
+update-desktop-database ~/.local/share/applications || true
+```
+
+After installation, launch the app from the desktop menu as **Personal Ledger Pro** or run:
+
+```bash
+personal-ledger-pro
 ```
 
 ## Default Login Credentials
@@ -111,13 +129,15 @@ backups/           Local backup files, ignored by Git
 
 Personal Ledger Pro uses a local SQLite database managed through SQLAlchemy models and repositories. The database stores users, people, transactions, debts, debt payments, shared expenses, settlements, settings, report exports, categories, payment methods, accounts, and audit logs.
 
+The owner name in General Settings is not stored as text only. It is synchronized to a real `Person` record, and `owner_person_id` is stored in settings so shared living, dashboard, and reports can identify the current app owner without hardcoded calculation rules.
+
 Financial records should be treated as durable user data. Do not hard delete records without a reviewed retention strategy, and keep migration operations non-destructive.
 
 See [docs/database.md](docs/database.md).
 
 ## Reports
 
-PDF reports cover income, expenses, debts, shared living expenses, and full financial summaries. Report identity settings such as owner name and footer text are managed through app settings.
+PDF reports cover income, expenses, debts, shared living expenses, and full financial summaries. Report identity settings such as owner name, logo path, title prefix, and footer text are managed through app settings.
 
 See [docs/reports.md](docs/reports.md).
 

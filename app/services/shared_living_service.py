@@ -13,6 +13,7 @@ from app.repositories.shared_expense_repository import SharedExpenseRepository
 from app.services.audit_log_service import AuditLogService
 from app.services.settlement_service import Settlement, SettlementService
 from app.services.exceptions import NotFoundError, ValidationError
+from app.services.settings_service import SettingsService
 from app.services.shared_split_rules import equal_split
 from app.utils.money import to_decimal, validate_positive_money
 
@@ -96,10 +97,23 @@ class SharedLivingService:
                 totals[participant.person.name] = totals.get(participant.person.name, Decimal("0.00")) + participant.balance
         return {name: to_decimal(value) for name, value in totals.items()}
 
+    def balance_by_person_id(self) -> dict[int, Decimal]:
+        totals: dict[int, Decimal] = {}
+        for expense in self.list_expenses():
+            for participant in expense.participants:
+                totals[participant.person_id] = totals.get(participant.person_id, Decimal("0.00")) + participant.balance
+        return {person_id: to_decimal(value) for person_id, value in totals.items()}
+
+    def owner_balance(self) -> Decimal:
+        owner_id = SettingsService(self.session).owner_person_id()
+        if owner_id is None:
+            return Decimal("0.00")
+        return self.balance_by_person_id().get(owner_id, Decimal("0.00"))
+
     def summary(self) -> dict[str, Decimal]:
-        balances = self.balances()
-        receivable = sum((amount for amount in balances.values() if amount > 0), Decimal("0.00"))
-        payable = sum((-amount for amount in balances.values() if amount < 0), Decimal("0.00"))
+        owner_balance = self.owner_balance()
+        receivable = owner_balance if owner_balance > 0 else Decimal("0.00")
+        payable = -owner_balance if owner_balance < 0 else Decimal("0.00")
         return {"receivable": to_decimal(receivable), "payable": to_decimal(payable)}
 
     def settlements(self) -> list[Settlement]:

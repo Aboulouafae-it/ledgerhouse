@@ -13,6 +13,7 @@ Personal Ledger Pro is a local-first Debian/Linux desktop finance manager built 
 - Keep database access in repositories.
 - Keep SQLAlchemy models focused on schema and relationships.
 - Keep reports isolated in the reporting layer.
+- Keep owner/person synchronization in settings and people services, not UI code.
 - Avoid broad cross-layer refactors without maintainer review.
 
 ## Database Rules
@@ -23,6 +24,7 @@ Personal Ledger Pro is a local-first Debian/Linux desktop finance manager built 
 - Preserve user data during schema changes.
 - Test database changes with fake or anonymized data.
 - Never ask users to upload real financial databases.
+- Store the current app owner through `owner_person_id` and a normal `Person` record.
 
 ## Money Handling Rules
 
@@ -60,6 +62,7 @@ Personal Ledger Pro is a local-first Debian/Linux desktop finance manager built 
 - Add focused tests for financial rules.
 - Improve README, docs, issue templates, and contribution guidance.
 - Audit database migrations for destructive operations.
+- Add tests around owner/person synchronization and shared living balances.
 - Suggest refactors with clear risk notes.
 - Improve report documentation and fake-data examples.
 

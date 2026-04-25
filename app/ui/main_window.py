@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QButtonGroup, QFrame, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton, QStackedWidget, QVBoxLayout, QWidget
 
-from app.core.config import STYLES_DIR, config
+from app.core.config import APP_LOGO_PATH, STYLES_DIR, config
+from app.core.i18n import apply_translations, tr
 from app.ui.dashboard_page import DashboardPage
 from app.ui.debts_page import DebtsPage
 from app.ui.people_page import PeoplePage
@@ -17,6 +19,8 @@ class MainWindow(QMainWindow):
     def __init__(self, default_password_warning: bool = False):
         super().__init__()
         self.setWindowTitle(config.app_name)
+        if APP_LOGO_PATH.exists():
+            self.setWindowIcon(QIcon(str(APP_LOGO_PATH)))
         self.resize(QSize(1280, 820))
         root = QWidget()
         self.setCentralWidget(root)
@@ -29,6 +33,12 @@ class MainWindow(QMainWindow):
         side_layout = QVBoxLayout(sidebar)
         side_layout.setContentsMargins(16, 20, 16, 18)
         side_layout.setSpacing(8)
+        brand_logo = QLabel()
+        brand_logo.setObjectName("brandLogo")
+        brand_logo.setAlignment(Qt.AlignLeft)
+        if APP_LOGO_PATH.exists():
+            brand_logo.setPixmap(QPixmap(str(APP_LOGO_PATH)).scaled(58, 58, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            side_layout.addWidget(brand_logo)
         brand = QLabel("Personal\nLedger Pro")
         brand.setObjectName("brandTitle")
         brand_subtitle = QLabel("Local finance suite")
@@ -66,8 +76,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stack, 1)
         self.stack.currentChanged.connect(self._refresh_current_page)
         self._load_stylesheet()
+        apply_translations(self)
         if default_password_warning:
-            QMessageBox.information(self, "Security reminder", "You are using the default password. Please change it in Settings.")
+            QMessageBox.information(self, tr("Security reminder"), tr("You are using the default password. Please change it in Settings."))
 
     def _refresh_current_page(self, index: int) -> None:
         page = self.stack.widget(index)

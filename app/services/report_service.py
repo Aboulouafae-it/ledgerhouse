@@ -16,6 +16,7 @@ from app.services.transaction_service import TransactionService
 from app.services.audit_log_service import AuditLogService
 from app.repositories.report_repository import ReportRepository
 from app.repositories.user_repository import UserRepository
+from app.core.config import APP_LOGO_PATH
 from app.core.session import current_session
 
 
@@ -92,6 +93,7 @@ class ReportService:
             ReportGenerator(
                 settings.get("report_title_prefix", "Personal Ledger Pro"),
                 settings.get("report_footer_text", "Administrative financial report"),
+                settings.get("report_logo_path", str(APP_LOGO_PATH)),
             ),
             owner_name or settings.get("owner_name", ""),
         )

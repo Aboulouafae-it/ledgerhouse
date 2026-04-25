@@ -25,6 +25,19 @@ Primary data areas include:
 - Report exports.
 - Audit logs.
 
+## Owner Person
+
+The current app owner is represented as a normal `Person` row, not as a text-only setting.
+
+When `owner_name` is saved in General Settings or report identity settings, the settings service creates or updates a matching person using `normalized_name`. The owner person is always marked as active and as a shared living member:
+
+- `is_active = true`
+- `is_house_member = true`
+
+The corresponding `people.id` is stored in `AppSetting` as `owner_person_id`. This lets the app identify the owner for dashboard summaries and reports while keeping shared living calculations generic.
+
+The owner is not hardcoded in split logic. Shared expenses treat the owner like any other participant; the owner role only tells the app which person's balance belongs to the current user.
+
 ## People Roles
 
 People can represent multiple finance roles at the same time:

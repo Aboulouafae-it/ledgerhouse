@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -eu
+
+PROJECT_DIR="/home/emorphi/Documents/bedgite MoWaf/finance_manager"
+cd "$PROJECT_DIR"
+
+if [ -x "$PROJECT_DIR/venv/bin/python" ]; then
+    exec "$PROJECT_DIR/venv/bin/python" -m app.main "$@"
+fi
+
+if [ -x "$PROJECT_DIR/.venv/bin/python" ]; then
+    exec "$PROJECT_DIR/.venv/bin/python" -m app.main "$@"
+fi
+
+exec python3 -m app.main "$@"

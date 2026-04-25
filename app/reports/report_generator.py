@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models.debt import Debt
 from app.models.shared_expense import SharedExpense
@@ -44,9 +44,15 @@ class ReportContext:
 
 
 class ReportGenerator:
-    def __init__(self, title_prefix: str = "Personal Ledger Pro", footer_text: str = "Administrative financial report"):
+    def __init__(
+        self,
+        title_prefix: str = "Personal Ledger Pro",
+        footer_text: str = "Administrative financial report",
+        logo_path: str = "",
+    ):
         self.title_prefix = title_prefix or "Personal Ledger Pro"
         self.footer_text = footer_text or "Administrative financial report"
+        self.logo_path = Path(logo_path) if logo_path else None
 
     def income_report(self, *, output_path: Path, owner_name: str, period: tuple[date, date], transactions: Sequence[Transaction]) -> Path:
         total = sum((tx.amount for tx in transactions), Decimal("0.00"))
@@ -173,17 +179,52 @@ class ReportGenerator:
 
     def _base_story(self, context: ReportContext, summary_cards: Sequence[tuple[str, str]]) -> list[object]:
         return [
-            Paragraph(context.title_prefix, self._styles()["brand"]),
-            Paragraph(context.title, self._styles()["title"]),
-            Paragraph("Administrative financial document suitable for printing, archiving, and review.", self._styles()["subtitle"]),
-            self._meta_table(context),
-            Spacer(1, 0.32 * cm),
+            self._report_header(context),
+            Spacer(1, 0.34 * cm),
             self._summary_cards(summary_cards[:6], context.accent),
             Spacer(1, 0.2 * cm),
         ]
 
     def _context(self, title: str, owner_name: str, period: tuple[date, date], accent: colors.Color) -> ReportContext:
         return ReportContext(title, owner_name, period, datetime.now(), accent, self.title_prefix, self.footer_text)
+
+    def _report_header(self, context: ReportContext) -> object:
+        period = f"{context.period[0].isoformat()} to {context.period[1].isoformat()}"
+        generated = context.generated_at.strftime("%Y-%m-%d %H:%M")
+        owner = context.owner_name or "Not specified"
+        details = f"<b>Owner:</b> {owner} &nbsp;&nbsp; <b>Period:</b> {period} &nbsp;&nbsp; <b>Generated:</b> {generated}"
+        title = Paragraph(context.title, self._styles()["headerTitle"])
+        brand = Paragraph(context.title_prefix, self._styles()["headerBrand"])
+        subtitle = Paragraph("Administrative financial document suitable for printing, archiving, and review.", self._styles()["headerSubtitle"])
+        meta = Paragraph(details, self._styles()["headerMeta"])
+        if self.logo_path and self.logo_path.exists():
+            logo = Image(str(self.logo_path), width=1.55 * cm, height=1.55 * cm, kind="proportional")
+        else:
+            logo = Paragraph("PL", self._styles()["headerInitials"])
+        table = Table(
+            [[logo, brand], ["", title], ["", subtitle], ["", meta]],
+            colWidths=[2.0 * cm, 14.5 * cm],
+            hAlign="CENTER",
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), PANEL_ALT),
+                    ("BOX", (0, 0), (-1, -1), 0.8, BORDER),
+                    ("LINEBELOW", (0, -1), (-1, -1), 2.2, context.accent),
+                    ("SPAN", (0, 0), (0, -1)),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, 0), 11),
+                    ("BOTTOMPADDING", (0, -1), (-1, -1), 11),
+                    ("TOPPADDING", (0, 1), (-1, 2), 1),
+                    ("BOTTOMPADDING", (0, 1), (-1, 2), 1),
+                ]
+            )
+        )
+        return table
 
     def _transaction_table(self, transactions: Sequence[Transaction]) -> Table:
         rows = [["Date", "Type", "Category", "Amount", "Person", "Note"]]
@@ -212,6 +253,11 @@ class ReportGenerator:
             "brand": ParagraphStyle("Brand", parent=styles["Title"], fontSize=13, textColor=MUTED, alignment=TA_CENTER, spaceAfter=3),
             "title": ParagraphStyle("ReportTitle", parent=styles["Title"], fontSize=24, textColor=INK, alignment=TA_CENTER, spaceAfter=5),
             "subtitle": ParagraphStyle("Subtitle", parent=styles["BodyText"], fontSize=9, textColor=MUTED, alignment=TA_CENTER, spaceAfter=12),
+            "headerBrand": ParagraphStyle("HeaderBrand", parent=styles["BodyText"], fontSize=10, leading=12, textColor=MUTED, alignment=TA_LEFT, spaceAfter=1),
+            "headerTitle": ParagraphStyle("HeaderTitle", parent=styles["Title"], fontSize=22, leading=26, textColor=INK, alignment=TA_LEFT, spaceAfter=1),
+            "headerSubtitle": ParagraphStyle("HeaderSubtitle", parent=styles["BodyText"], fontSize=8.5, leading=10.5, textColor=MUTED, alignment=TA_LEFT, spaceAfter=3),
+            "headerMeta": ParagraphStyle("HeaderMeta", parent=styles["BodyText"], fontSize=7.8, leading=10, textColor=INK, alignment=TA_LEFT),
+            "headerInitials": ParagraphStyle("HeaderInitials", parent=styles["Title"], fontSize=18, textColor=INFO, alignment=TA_CENTER),
             "section": ParagraphStyle("Section", parent=styles["Heading2"], fontSize=13, textColor=INK, spaceBefore=15, spaceAfter=7),
             "cell": ParagraphStyle("Cell", parent=styles["BodyText"], fontSize=7.6, leading=9.5, textColor=INK),
         }
@@ -328,6 +374,7 @@ class ReportGenerator:
         doc = SimpleDocTemplate(str(output_path), pagesize=A4, rightMargin=1.35 * cm, leftMargin=1.35 * cm, topMargin=1.65 * cm, bottomMargin=1.35 * cm)
         doc.footer_text = self.footer_text  # type: ignore[attr-defined]
         doc.title_prefix = self.title_prefix  # type: ignore[attr-defined]
+        doc.logo_path = str(self.logo_path) if self.logo_path and self.logo_path.exists() else ""  # type: ignore[attr-defined]
         doc.build(story, onFirstPage=self._footer, onLaterPages=self._footer)
         return output_path
 
@@ -335,9 +382,14 @@ class ReportGenerator:
         canvas.saveState()
         canvas.setFillColor(BRAND)
         canvas.rect(0, A4[1] - 0.72 * cm, A4[0], 0.72 * cm, stroke=0, fill=1)
+        logo_path = getattr(doc, "logo_path", "")
+        title_x = 1.35 * cm
+        if logo_path:
+            canvas.drawImage(logo_path, 1.35 * cm, A4[1] - 0.64 * cm, width=0.5 * cm, height=0.5 * cm, preserveAspectRatio=True, mask="auto")
+            title_x = 2.02 * cm
         canvas.setFillColor(colors.white)
         canvas.setFont("Helvetica-Bold", 9)
-        canvas.drawString(1.35 * cm, A4[1] - 0.46 * cm, getattr(doc, "title_prefix", "Personal Ledger Pro"))
+        canvas.drawString(title_x, A4[1] - 0.46 * cm, getattr(doc, "title_prefix", "Personal Ledger Pro"))
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(MUTED)
         canvas.line(1.35 * cm, 1.03 * cm, A4[0] - 1.35 * cm, 1.03 * cm)
