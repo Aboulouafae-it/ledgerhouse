@@ -1,0 +1,50 @@
+name: Database issue
+description: Report a migration, schema, backup, restore, or integrity issue.
+title: "[Database]: "
+labels:
+  - database
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not upload real financial databases.
+
+        Use fake or anonymized data, logs, screenshots, and schema examples only.
+  - type: textarea
+    id: operation
+    attributes:
+      label: Operation that caused the issue
+      description: Describe the action being performed when the issue occurred.
+      placeholder: "Opening app after upgrade, restoring backup, running integrity check..."
+    validations:
+      required: true
+  - type: textarea
+    id: error-message
+    attributes:
+      label: Error message
+      description: Paste the relevant error message after removing private data.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: backup-exists
+    attributes:
+      label: Whether backup exists
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: anonymized
+    attributes:
+      label: Whether data is fake/anonymized
+      options:
+        - label: I confirm that all data shared in this issue is fake or anonymized.
+          required: true
+  - type: textarea
+    id: migration-context
+    attributes:
+      label: Migration/schema context
+      description: Include fake schema snippets, migration names, app version, or commit context if relevant.

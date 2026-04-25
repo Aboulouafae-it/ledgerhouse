@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement for Personal Ledger Pro.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or workflow gap should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What other approaches did you consider?
+  - type: textarea
+    id: ui-impact
+    attributes:
+      label: UI impact
+      description: Which screens, dialogs, or workflows would change?
+  - type: textarea
+    id: database-impact
+    attributes:
+      label: Database impact
+      description: Would this require new tables, fields, migrations, or data retention rules?
