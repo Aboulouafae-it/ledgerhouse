@@ -46,9 +46,8 @@ The application is local-first: financial data is stored in a local SQLite datab
 
 ## Demo
 
-Demo placeholder:
+A short Demo GIF will be added soon
 
-- `docs/assets/demo/personal-ledger-pro-demo.gif`
 
 ## Installation on Debian
 
