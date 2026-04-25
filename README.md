@@ -29,12 +29,20 @@ The application is local-first: financial data is stored in a local SQLite datab
 
 ## Screenshots
 
-Screenshots are placeholders until real, privacy-safe images are added.
+ Dashboard
+![Dashboard](docs/assets/screenshots/dashboard.png)
 
-- `docs/assets/screenshots/dashboard.png`
-- `docs/assets/screenshots/debts.png`
-- `docs/assets/screenshots/shared-living.png`
-- `docs/assets/screenshots/pdf-report.png`
+ Debts
+![Debts](docs/assets/screenshots/debts.png)
+
+ Login
+![Login](docs/assets/screenshots/login.png)
+
+ PDF Report
+![PDF Report](docs/assets/screenshots/pdf-report.png)
+
+ Shared Living
+![Shared Living](docs/assets/screenshots/shared-living.png)
 
 ## Demo
 
