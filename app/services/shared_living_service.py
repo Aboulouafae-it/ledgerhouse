@@ -34,6 +34,12 @@ class SharedLivingService:
     def list_expenses(self) -> list[SharedExpense]:
         return self.repo.list_expenses()
 
+    def get_expense(self, expense_id: int) -> SharedExpense:
+        expense = self.repo.get_by_id(expense_id)
+        if expense is None:
+            raise NotFoundError("Shared expense not found.")
+        return expense
+
     def add_equal_expense(
         self,
         *,
@@ -89,6 +95,63 @@ class SharedLivingService:
             )
         AuditLogService(self.session).record("create shared expense", "SharedExpense", expense.id, new_value={"title": title, "amount": str(amount_dec)})
         return expense
+
+    def update_equal_expense(
+        self,
+        expense_id: int,
+        *,
+        title: str,
+        amount: Decimal | str,
+        paid_by_person_id: int,
+        participant_ids: list[int],
+        date_: date,
+        note: str | None = None,
+    ) -> SharedExpense:
+        expense = self.get_expense(expense_id)
+        self.repo.delete_expense(expense)
+        updated = self.add_equal_expense(
+            title=title,
+            amount=amount,
+            paid_by_person_id=paid_by_person_id,
+            participant_ids=participant_ids,
+            date_=date_,
+            note=note,
+        )
+        AuditLogService(self.session).record("update shared expense", "SharedExpense", updated.id, old_value={"id": expense_id}, new_value={"title": title})
+        return updated
+
+    def delete_expense(self, expense_id: int) -> None:
+        expense = self.get_expense(expense_id)
+        title = expense.title
+        self.repo.delete_expense(expense)
+        AuditLogService(self.session).record("delete shared expense", "SharedExpense", expense_id, old_value={"title": title})
+
+    def member_month_details(self, person_id: int, today: date | None = None) -> dict[str, object]:
+        today = today or date.today()
+        start = date(today.year, today.month, 1)
+        paid_total = Decimal("0.00")
+        share_total = Decimal("0.00")
+        balance_total = Decimal("0.00")
+        paid_items: list[tuple[date, str, Decimal]] = []
+        participated_items: list[tuple[date, str, Decimal, Decimal, Decimal]] = []
+        for expense in self.list_expenses():
+            if not (start <= expense.date <= today):
+                continue
+            if expense.paid_by_person_id == person_id:
+                paid_total += expense.amount
+                paid_items.append((expense.date, expense.title, expense.amount))
+            for participant in expense.participants:
+                if participant.person_id == person_id:
+                    share_total += participant.share_amount
+                    balance_total += participant.balance
+                    participated_items.append((expense.date, expense.title, participant.share_amount, participant.paid_amount, participant.balance))
+        return {
+            "paid_total": to_decimal(paid_total),
+            "share_total": to_decimal(share_total),
+            "balance_total": to_decimal(balance_total),
+            "paid_items": paid_items,
+            "participated_items": participated_items,
+        }
 
     def balances(self) -> dict[str, Decimal]:
         totals: dict[str, Decimal] = {}

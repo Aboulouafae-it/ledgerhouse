@@ -22,6 +22,8 @@ Debt reports summarize creditors, debtors, outstanding balances, partial payment
 
 Shared living reports summarize shared expenses, participants, splits, owed amounts, and settlement suggestions.
 
+Shared living total bars are rendered at the bottom of the PDF page, above the footer, instead of appearing in the middle of the report body.
+
 ## Full Report
 
 Full reports combine personal transactions, debts, shared living activity, and summary totals into one PDF.

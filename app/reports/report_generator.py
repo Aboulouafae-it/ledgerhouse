@@ -53,6 +53,7 @@ class ReportGenerator:
         self.title_prefix = title_prefix or "Personal Ledger Pro"
         self.footer_text = footer_text or "Administrative financial report"
         self.logo_path = Path(logo_path) if logo_path else None
+        self._bottom_total_bar: tuple[str, str] | None = None
 
     def income_report(self, *, output_path: Path, owner_name: str, period: tuple[date, date], transactions: Sequence[Transaction]) -> Path:
         total = sum((tx.amount for tx in transactions), Decimal("0.00"))
@@ -178,6 +179,7 @@ class ReportGenerator:
         return self._build(output_path, story)
 
     def _base_story(self, context: ReportContext, summary_cards: Sequence[tuple[str, str]]) -> list[object]:
+        self._bottom_total_bar = None
         return [
             self._report_header(context),
             Spacer(1, 0.34 * cm),
@@ -260,6 +262,8 @@ class ReportGenerator:
             "headerInitials": ParagraphStyle("HeaderInitials", parent=styles["Title"], fontSize=18, textColor=INFO, alignment=TA_CENTER),
             "section": ParagraphStyle("Section", parent=styles["Heading2"], fontSize=13, textColor=INK, spaceBefore=15, spaceAfter=7),
             "cell": ParagraphStyle("Cell", parent=styles["BodyText"], fontSize=7.6, leading=9.5, textColor=INK),
+            "headerCell": ParagraphStyle("HeaderCell", parent=styles["BodyText"], fontSize=7.8, leading=9.8, textColor=colors.white, alignment=TA_LEFT),
+            "summaryCell": ParagraphStyle("SummaryCell", parent=styles["BodyText"], fontSize=8, leading=9.8, textColor=INK),
         }
 
     def _section(self, title: str) -> Paragraph:
@@ -296,7 +300,7 @@ class ReportGenerator:
         cells: list[list[object]] = []
         row: list[object] = []
         for label, value in cards:
-            row.append(Paragraph(f"<font color='#6B7280' size='7'>{label}</font><br/><font color='#111827' size='13'><b>{value}</b></font>", self._styles()["cell"]))
+            row.append(Paragraph(f"<font color='#6B7280' size='7'>{label}</font><br/><br/><font color='#111827' size='13'><b>{value}</b></font>", self._styles()["summaryCell"]))
             if len(row) == 3:
                 cells.append(row)
                 row = []
@@ -313,8 +317,8 @@ class ReportGenerator:
                     ("LINEABOVE", (0, 0), (-1, 0), 2, accent),
                     ("LEFTPADDING", (0, 0), (-1, -1), 9),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 9),
-                    ("TOPPADDING", (0, 0), (-1, -1), 9),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+                    ("TOPPADDING", (0, 0), (-1, -1), 11),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ]
             )
@@ -324,7 +328,10 @@ class ReportGenerator:
     def _table(self, rows: list[list[object]], widths: list[float], numeric_cols: set[int] | None = None) -> Table:
         if len(rows) == 1:
             rows.append(["No records available"] + [""] * (len(rows[0]) - 1))
-        wrapped = [[self._wrap_cell(cell) for cell in row] for row in rows]
+        wrapped = []
+        for row_index, row in enumerate(rows):
+            style_name = "headerCell" if row_index == 0 else "cell"
+            wrapped.append([self._wrap_cell(cell, style_name) for cell in row])
         table = Table(wrapped, colWidths=widths, repeatRows=1)
         commands = [
             ("BACKGROUND", (0, 0), (-1, 0), BRAND),
@@ -344,42 +351,33 @@ class ReportGenerator:
         table.setStyle(TableStyle(commands))
         return table
 
-    def _wrap_cell(self, value: object) -> object:
+    def _wrap_cell(self, value: object, style_name: str = "cell") -> object:
         if isinstance(value, Paragraph):
             return value
         text = str(value)
         escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        return Paragraph(escaped, self._styles()["cell"])
+        return Paragraph(escaped, self._styles()[style_name])
 
-    def _total_bar(self, label: str, amount: str) -> Table:
-        table = Table([[label, amount]], colWidths=[11.5 * cm, 5 * cm])
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), PANEL),
-                    ("BOX", (0, 0), (-1, -1), 0.6, BORDER),
-                    ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-                    ("ALIGN", (1, 0), (1, 0), "RIGHT"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ]
-            )
-        )
-        return table
+    def _total_bar(self, label: str, amount: str) -> Spacer:
+        self._bottom_total_bar = (label, amount)
+        return Spacer(1, 0)
 
     def _build(self, output_path: Path, story: list[object]) -> Path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        doc = SimpleDocTemplate(str(output_path), pagesize=A4, rightMargin=1.35 * cm, leftMargin=1.35 * cm, topMargin=1.65 * cm, bottomMargin=1.35 * cm)
+        bottom_margin = 2.25 * cm if self._bottom_total_bar else 1.35 * cm
+        doc = SimpleDocTemplate(str(output_path), pagesize=A4, rightMargin=1.35 * cm, leftMargin=1.35 * cm, topMargin=1.65 * cm, bottomMargin=bottom_margin)
         doc.footer_text = self.footer_text  # type: ignore[attr-defined]
         doc.title_prefix = self.title_prefix  # type: ignore[attr-defined]
         doc.logo_path = str(self.logo_path) if self.logo_path and self.logo_path.exists() else ""  # type: ignore[attr-defined]
+        doc.bottom_total_bar = self._bottom_total_bar  # type: ignore[attr-defined]
         doc.build(story, onFirstPage=self._footer, onLaterPages=self._footer)
         return output_path
 
     def _footer(self, canvas, doc) -> None:  # type: ignore[no-untyped-def]
         canvas.saveState()
+        total_bar = getattr(doc, "bottom_total_bar", None)
+        if total_bar:
+            self._draw_bottom_total_bar(canvas, total_bar[0], total_bar[1])
         canvas.setFillColor(BRAND)
         canvas.rect(0, A4[1] - 0.72 * cm, A4[0], 0.72 * cm, stroke=0, fill=1)
         logo_path = getattr(doc, "logo_path", "")
@@ -396,3 +394,18 @@ class ReportGenerator:
         canvas.drawString(1.35 * cm, 0.7 * cm, getattr(doc, "footer_text", "Administrative financial report"))
         canvas.drawRightString(A4[0] - 1.35 * cm, 0.7 * cm, f"Page {doc.page}")
         canvas.restoreState()
+
+    def _draw_bottom_total_bar(self, canvas, label: str, amount: str) -> None:  # type: ignore[no-untyped-def]
+        x = 1.35 * cm
+        y = 1.18 * cm
+        width = A4[0] - (2.7 * cm)
+        height = 0.62 * cm
+        canvas.setFillColor(PANEL)
+        canvas.setStrokeColor(BORDER)
+        canvas.setLineWidth(0.6)
+        canvas.rect(x, y, width, height, stroke=1, fill=1)
+        canvas.setFillColor(colors.black)
+        canvas.setFont("Helvetica-Bold", 9.2)
+        text_y = y + 0.24 * cm
+        canvas.drawString(x + 0.25 * cm, text_y, label)
+        canvas.drawRightString(x + width - 0.25 * cm, text_y, amount)

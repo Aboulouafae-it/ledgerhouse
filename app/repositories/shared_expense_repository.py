@@ -28,6 +28,16 @@ class SharedExpenseRepository:
     def list_expenses(self) -> list[SharedExpense]:
         return list(self.session.scalars(select(SharedExpense).options(joinedload(SharedExpense.paid_by), joinedload(SharedExpense.participants).joinedload(SharedExpenseParticipant.person)).order_by(SharedExpense.date.desc(), SharedExpense.id.desc())).unique())
 
+    def get_by_id(self, expense_id: int) -> SharedExpense | None:
+        return self.session.scalar(
+            select(SharedExpense)
+            .where(SharedExpense.id == expense_id)
+            .options(joinedload(SharedExpense.paid_by), joinedload(SharedExpense.participants).joinedload(SharedExpenseParticipant.person))
+        )
+
+    def delete_expense(self, expense: SharedExpense) -> None:
+        self.session.delete(expense)
+        self.session.flush()
+
     def get_expenses_by_period(self, start: date, end: date) -> list[SharedExpense]:
         return [expense for expense in self.list_expenses() if start <= expense.date <= end]
-

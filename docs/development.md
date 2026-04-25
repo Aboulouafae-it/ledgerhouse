@@ -60,6 +60,8 @@ personal-ledger-pro
 - Keep UI files focused on presentation.
 - Keep owner/person synchronization in services.
 - Treat the owner as a normal `Person` in shared living calculations.
+- Keep shared expense edit, delete, and detail workflows routed through services.
+- Keep PDF fixed-position page elements in report generation helpers, not in UI code.
 - Never store plaintext passwords.
 - Never use float for money.
 - Do not hard delete financial records.

@@ -18,6 +18,8 @@ The application is local-first: financial data is stored in a local SQLite datab
 - Personal income and expense tracking.
 - Debt tracking with creditors, debtors, and partial payments.
 - Shared living expense splits and settlement suggestions.
+- Shared expense row actions for details, editing, and deletion.
+- Monthly shared living member detail views for paid amounts, shares, and balances.
 - People management for creditors, debtors, shared living members, and the current app owner.
 - Owner identity stored as a real `Person` record through `owner_person_id`.
 - PDF financial reports with a branded header and app logo.
@@ -137,7 +139,7 @@ See [docs/database.md](docs/database.md).
 
 ## Reports
 
-PDF reports cover income, expenses, debts, shared living expenses, and full financial summaries. Report identity settings such as owner name, logo path, title prefix, and footer text are managed through app settings.
+PDF reports cover income, expenses, debts, shared living expenses, and full financial summaries. Report identity settings such as owner name, logo path, title prefix, and footer text are managed through app settings. Report total bars are pinned to the bottom of the PDF page when available.
 
 See [docs/reports.md](docs/reports.md).
 
