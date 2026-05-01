@@ -33,6 +33,7 @@ from app.services.payment_method_service import PaymentMethodService
 from app.services.person_service import PersonService
 from app.services.settings_service import SettingsService
 from app.services.backup_service import BackupService
+from app.ui.events import events
 from app.ui.helpers import show_error
 from app.ui.widgets import ModernTable, PrimaryButton, SecondaryButton, SectionCard, StatCard
 
@@ -117,7 +118,7 @@ class SettingsPage(QWidget):
         self.first_day = QComboBox()
         self.first_day.addItems(["Monday", "Sunday", "Saturday"])
         self.dashboard_period = QComboBox()
-        self.dashboard_period.addItems(["this month", "last month", "this year", "custom"])
+        self.dashboard_period.addItems(["this month", "last month", "this year", "all time"])
         for label, widget in [
             ("Owner name", self.owner_name),
             ("Default currency", self.default_currency),
@@ -397,6 +398,8 @@ class SettingsPage(QWidget):
                     }
                 )
             self._toast("General settings saved.")
+            events.settings_changed.emit()
+            events.people_changed.emit()
         except Exception as exc:
             show_error(self, "Settings not saved", exc)
 
@@ -411,6 +414,7 @@ class SettingsPage(QWidget):
             self._set_combo(self.report_language, language)
             apply_translations(self.window(), language)
             self._toast("Language saved. Restart the app to apply it everywhere.")
+            events.settings_changed.emit()
         except Exception as exc:
             show_error(self, "Language not saved", exc)
 
@@ -432,6 +436,7 @@ class SettingsPage(QWidget):
             self.confirm_password.clear()
             self.refresh()
             self._toast("Security settings saved.")
+            events.settings_changed.emit()
         except Exception as exc:
             show_error(self, "Security settings not saved", exc)
 
@@ -443,6 +448,7 @@ class SettingsPage(QWidget):
             with session_scope() as session:
                 PersonService(session).add_or_update_person(name=name, is_creditor=creditor, is_debtor=debtor, is_house_member=house)
             self.refresh()
+            events.people_changed.emit()
         except Exception as exc:
             show_error(self, "Person not saved", exc)
 
@@ -472,6 +478,7 @@ class SettingsPage(QWidget):
             with session_scope() as session:
                 PersonService(session).update_roles(person_id, is_active=False)
             self.refresh()
+            events.people_changed.emit()
         except Exception as exc:
             show_error(self, "Person not updated", exc)
 
@@ -491,6 +498,7 @@ class SettingsPage(QWidget):
                 CategoryService(session).add_category(self.cat_name.text(), CategoryType(self.cat_type.currentText()), self.cat_color.text())
             self.cat_name.clear()
             self._refresh_categories()
+            events.categories_changed.emit()
         except Exception as exc:
             show_error(self, "Category not saved", exc)
 
@@ -509,6 +517,7 @@ class SettingsPage(QWidget):
             with session_scope() as session:
                 CategoryService(session).set_active(int(self.category_table.item(row, 0).text()), False)
             self._refresh_categories()
+            events.categories_changed.emit()
         except Exception as exc:
             show_error(self, "Category not updated", exc)
 
@@ -518,6 +527,7 @@ class SettingsPage(QWidget):
                 PaymentMethodService(session).add_method(self.method_name.text(), PaymentMethodType(self.method_type.currentText()))
             self.method_name.clear()
             self._refresh_payment_methods()
+            events.payment_methods_changed.emit()
         except Exception as exc:
             show_error(self, "Payment method not saved", exc)
 
@@ -536,6 +546,7 @@ class SettingsPage(QWidget):
             with session_scope() as session:
                 PaymentMethodService(session).set_active(int(self.payment_table.item(row, 0).text()), False)
             self._refresh_payment_methods()
+            events.payment_methods_changed.emit()
         except Exception as exc:
             show_error(self, "Payment method not updated", exc)
 
@@ -555,6 +566,8 @@ class SettingsPage(QWidget):
                 settings.set_bool("report_include_charts", self.include_charts.isChecked())
                 settings.set_bool("report_include_signature", self.include_signature.isChecked())
             self._toast("Report identity saved.")
+            events.settings_changed.emit()
+            events.people_changed.emit()
         except Exception as exc:
             show_error(self, "Report settings not saved", exc)
 
@@ -589,6 +602,7 @@ class SettingsPage(QWidget):
                 settings.set_bool("compact_mode", self.compact.isChecked())
                 settings.set("table_density", self.table_density.currentText())
             self._toast("Appearance settings saved.")
+            events.settings_changed.emit()
         except Exception as exc:
             show_error(self, "Appearance not saved", exc)
 

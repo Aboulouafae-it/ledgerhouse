@@ -13,8 +13,14 @@ from app.ui.main_window import MainWindow
 
 
 def main() -> int:
-    init_db()
     app = QApplication(sys.argv)
+    try:
+        init_db()
+    except Exception as exc:
+        from PySide6.QtWidgets import QMessageBox
+
+        QMessageBox.critical(None, "Database upgrade failed", str(exc))
+        return 1
     qss_path = __import__("app.core.config", fromlist=["STYLES_DIR"]).STYLES_DIR / "dark.qss"
     if qss_path.exists():
         app.setStyleSheet(qss_path.read_text(encoding="utf-8"))

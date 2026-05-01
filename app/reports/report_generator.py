@@ -14,6 +14,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models.debt import Debt
+from app.models.debt import DebtDirection
 from app.models.shared_expense import SharedExpense
 from app.models.transaction import Transaction
 from app.services.settlement_service import Settlement
@@ -99,6 +100,7 @@ class ReportGenerator:
         rows = [["Person", "Direction", "Original", "Remaining", "Status", "Due Date", "Note"]]
         for debt in debts:
             rows.append([debt.person.name, debt.direction.value, money(debt.original_amount), money(debt.remaining_amount), debt.status.value, debt.due_date or "", debt.note or ""])
+        person_total_rows = self._debt_summary_by_person_rows(debts)
         story = self._base_story(
             self._context("Debt Report", owner_name, period, GOLD),
             [("Original Total", money(original)), ("Remaining", money(remaining)), ("Closed", money(original - remaining))],
@@ -106,6 +108,8 @@ class ReportGenerator:
         story += [
             self._section("Debt Register"),
             self._table(rows, [2.8 * cm, 3.1 * cm, 2.6 * cm, 2.8 * cm, 2.2 * cm, 2.3 * cm, 3 * cm], numeric_cols={2, 3}),
+            self._section("Debt Totals by Person"),
+            self._table(person_total_rows, [5.4 * cm, 3.7 * cm, 3.7 * cm, 3.7 * cm], numeric_cols={1, 2, 3}),
             self._total_bar("Remaining debt balance", money(remaining)),
         ]
         return self._build(output_path, story)
@@ -242,6 +246,25 @@ class ReportGenerator:
         for debt in debts:
             rows.append([debt.person.name, debt.direction.value, money(debt.original_amount), money(debt.remaining_amount), debt.status.value, debt.due_date or ""])
         return self._table(rows, [3 * cm, 3.6 * cm, 2.7 * cm, 2.8 * cm, 2.3 * cm, 2.5 * cm], numeric_cols={2, 3})
+
+    def _debt_summary_by_person_rows(self, debts: Sequence[Debt]) -> list[list[object]]:
+        by_person: dict[tuple[str, str], dict[str, Decimal]] = {}
+        for debt in debts:
+            if debt.remaining_amount <= 0:
+                continue
+            name = debt.person.name
+            currency = debt.currency or "EUR"
+            totals = by_person.setdefault((name, currency), {"i_owe": Decimal("0.00"), "owes_me": Decimal("0.00")})
+            if debt.direction == DebtDirection.I_OWE_HIM:
+                totals["i_owe"] += debt.remaining_amount
+            else:
+                totals["owes_me"] += debt.remaining_amount
+
+        rows: list[list[object]] = [["Person", "I owe them", "They owe me", "Net"]]
+        for (name, currency), totals in sorted(by_person.items(), key=lambda item: item[0][0].casefold()):
+            net = totals["owes_me"] - totals["i_owe"]
+            rows.append([name, money(totals["i_owe"], currency), money(totals["owes_me"], currency), money(net, currency)])
+        return rows
 
     def _shared_table(self, expenses: Sequence[SharedExpense]) -> Table:
         rows = [["Date", "Title", "Amount", "Paid By", "Participants"]]

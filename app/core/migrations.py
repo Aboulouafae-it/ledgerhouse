@@ -45,7 +45,12 @@ def ensure_columns(engine: Engine) -> None:
                 "normalized_name": "VARCHAR(140) NOT NULL DEFAULT ''",
                 "is_creditor": "BOOLEAN NOT NULL DEFAULT 0",
                 "is_debtor": "BOOLEAN NOT NULL DEFAULT 0",
+                "is_employer": "BOOLEAN NOT NULL DEFAULT 0",
+                "is_service_provider": "BOOLEAN NOT NULL DEFAULT 0",
+                "is_family_friend": "BOOLEAN NOT NULL DEFAULT 0",
+                "is_house_member": "BOOLEAN NOT NULL DEFAULT 0",
                 "is_active": "BOOLEAN NOT NULL DEFAULT 1",
+                "note": "TEXT",
             },
         )
         _add_missing_columns(
@@ -70,6 +75,8 @@ def ensure_columns(engine: Engine) -> None:
                 "payment_method_id": "INTEGER REFERENCES payment_methods(id) ON DELETE SET NULL",
                 "reference_type": "VARCHAR(60)",
                 "reference_id": "INTEGER",
+                "is_active": "BOOLEAN NOT NULL DEFAULT 1",
+                "deleted_at": "DATETIME",
             },
         )
         _add_missing_columns(

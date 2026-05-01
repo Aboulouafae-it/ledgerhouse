@@ -82,9 +82,7 @@ class SettingsService:
     def set_owner_name(self, name: str) -> Person | None:
         name = name.strip()
         if not name:
-            self.set("owner_name", "", "str")
-            self.set("owner_person_id", "", "int")
-            return None
+            raise ValidationError("Owner name is required.")
 
         repo = PersonRepository(self.session)
         owner = self.owner_person()

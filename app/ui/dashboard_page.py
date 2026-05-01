@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGridLayout, QLabel, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QGridLayout, QHBoxLayout, QLabel, QTableWidgetItem, QVBoxLayout, QWidget
 
 try:
     from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -13,8 +13,9 @@ except Exception:  # pragma: no cover
 from app.core.database import session_scope
 from app.services.dashboard_service import DashboardService
 from app.services.transaction_service import TransactionService
+from app.ui.events import events
 from app.ui.theme import Theme
-from app.ui.widgets import ModernTable, SectionCard, StatCard
+from app.ui.widgets import ModernTable, SecondaryButton, SectionCard, StatCard
 from app.utils.money import money
 
 
@@ -30,6 +31,18 @@ class DashboardPage(QWidget):
         subtitle.setObjectName("pageSubtitle")
         self.layout.addWidget(title)
         self.layout.addWidget(subtitle)
+        controls = QHBoxLayout()
+        self.period = QComboBox()
+        self.period.addItems(["This month", "Last month", "This year", "All time"])
+        self.period.currentTextChanged.connect(self.refresh)
+        self.period_label = QLabel("")
+        refresh = SecondaryButton("Refresh")
+        refresh.clicked.connect(self.refresh)
+        controls.addWidget(QLabel("Period"))
+        controls.addWidget(self.period)
+        controls.addWidget(self.period_label, 1)
+        controls.addWidget(refresh)
+        self.layout.addLayout(controls)
         self.cards = QGridLayout()
         self.cards.setSpacing(16)
         self.layout.addLayout(self.cards)
@@ -43,6 +56,19 @@ class DashboardPage(QWidget):
         self.table = ModernTable(["Date", "Type", "Amount", "Category", "Note"])
         self.table_card.layout.addWidget(self.table)
         self.layout.addWidget(self.table_card)
+        events.transactions_changed.connect(self.refresh)
+        events.debts_changed.connect(self.refresh)
+        events.shared_living_changed.connect(self.refresh)
+        events.settings_changed.connect(self._load_default_period)
+        self._load_default_period()
+
+    def _load_default_period(self) -> None:
+        with session_scope() as session:
+            summary = DashboardService(session).summary()
+        label = str(summary["period_label"])
+        index = self.period.findText(label)
+        if index >= 0:
+            self.period.setCurrentIndex(index)
         self.refresh()
 
     def refresh(self) -> None:
@@ -51,16 +77,18 @@ class DashboardPage(QWidget):
             if item.widget():
                 item.widget().deleteLater()
         with session_scope() as session:
-            summary = DashboardService(session).summary()
+            summary = DashboardService(session).summary(period=self.period.currentText())
+            currency = str(summary["currency"])
+            self.period_label.setText(str(summary["period_label"]))
             metrics = [
-                ("Income", money(summary["income"]), Theme.INCOME),
-                ("Expenses", money(summary["expenses"]), Theme.EXPENSE),
-                ("Net Balance", money(summary["net_balance"]), Theme.INFO),
-                ("Savings", money(summary["savings"]), Theme.SAVINGS),
-                ("Owed To Me", money(summary["owed_to_me"]), Theme.SHARED),
-                ("I Owe", money(summary["i_owe"]), Theme.WARNING),
-                ("Shared To Collect", money(summary["shared_receivable"]), Theme.SHARED),
-                ("Shared To Pay", money(summary["shared_payable"]), Theme.WARNING),
+                ("Income", money(summary["income"], currency), Theme.INCOME),
+                ("Expenses", money(summary["expenses"], currency), Theme.EXPENSE),
+                ("Net Balance", money(summary["net_balance"], currency), Theme.INFO),
+                ("Savings", money(summary["savings"], currency), Theme.SAVINGS),
+                ("Owed To Me", money(summary["owed_to_me"], currency), Theme.SHARED),
+                ("I Owe", money(summary["i_owe"], currency), Theme.WARNING),
+                ("Shared To Collect", money(summary["shared_receivable"], currency), Theme.SHARED),
+                ("Shared To Pay", money(summary["shared_payable"], currency), Theme.WARNING),
             ]
             for idx, metric in enumerate(metrics):
                 self.cards.addWidget(StatCard(*metric), idx // 4, idx % 4)

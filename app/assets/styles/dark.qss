@@ -206,6 +206,11 @@ QPushButton#secondaryButton:hover {
     background: #1F2937;
 }
 
+QPushButton#secondaryButton[tableAction="true"] {
+    padding: 6px 10px;
+    border-radius: 7px;
+}
+
 QPushButton#danger,
 QPushButton#dangerButton {
     background: #DC2626;
@@ -276,6 +281,24 @@ QHeaderView::section {
     border-bottom: 1px solid #1F2937;
     padding: 10px;
     font-weight: 800;
+}
+
+QMenu {
+    background: #0B1220;
+    color: #F9FAFB;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+QMenu::item {
+    padding: 8px 18px;
+    border-radius: 6px;
+}
+
+QMenu::item:selected {
+    background: #2563EB;
+    color: #F9FAFB;
 }
 
 QCheckBox {

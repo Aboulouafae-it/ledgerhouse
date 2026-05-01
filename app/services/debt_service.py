@@ -7,12 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.models.debt import Debt, DebtDirection, DebtStatus
 from app.models.debt_payment import DebtPayment
+from app.models.payment_method import PaymentMethod
 from app.models.person import Person
 from app.repositories.debt_repository import DebtRepository
+from app.repositories.payment_method_repository import PaymentMethodRepository
 from app.repositories.person_repository import PersonRepository
 from app.services.audit_log_service import AuditLogService
 from app.services.debt_rules import calculate_debt_status, calculate_remaining
 from app.services.exceptions import NotFoundError, ValidationError
+from app.services.settings_service import SettingsService
 from app.utils.money import to_decimal, validate_positive_money
 
 
@@ -21,6 +24,7 @@ class DebtService:
         self.session = session
         self.repo = DebtRepository(session)
         self.person_repo = PersonRepository(session)
+        self.payment_repo = PaymentMethodRepository(session)
 
     def list_debts(self) -> list[Debt]:
         debts = self.repo.list_debts()
@@ -34,6 +38,9 @@ class DebtService:
         else:
             return self.person_repo.get_debtors()
 
+    def payment_methods(self) -> list[PaymentMethod]:
+        return self.payment_repo.get_active_methods()
+
     def payment_history(self, debt_id: int) -> list[DebtPayment]:
         return self.repo.payment_history(debt_id)
 
@@ -45,7 +52,7 @@ class DebtService:
         amount: Decimal | str,
         due_date: date | None = None,
         note: str | None = None,
-        currency: str = "EUR",
+        currency: str | None = None,
     ) -> Debt:
         person = self.person_repo.get_by_id(person_id)
         if person is None or not person.is_active:
@@ -55,12 +62,15 @@ class DebtService:
         if direction == DebtDirection.HE_OWES_ME and not person.is_debtor:
             raise ValidationError("Select an active debtor for debts owed to you.")
         original = validate_positive_money(amount)
+        currency_code = (currency or SettingsService(self.session).get("default_currency", "EUR")).strip().upper()
+        if len(currency_code) != 3 or not currency_code.isalpha():
+            raise ValidationError("Currency must be a 3-letter code.")
         debt = self.repo.create_debt(
             person_id=person_id,
             direction=direction,
             original_amount=original,
             remaining_amount=original,
-            currency=currency,
+            currency=currency_code,
             status=DebtStatus.OPEN,
             due_date=due_date,
             note=note,
@@ -78,6 +88,10 @@ class DebtService:
         amount_dec = validate_positive_money(amount)
         if amount_dec > debt.remaining_amount:
             raise ValidationError(f"Payment cannot exceed the remaining amount ({debt.remaining_amount}).")
+        if payment_method_id is not None:
+            method = self.payment_repo.get_by_id(payment_method_id)
+            if method is None or not method.is_active:
+                raise NotFoundError("Payment method not found.")
         self.repo.add_payment(debt_id=debt_id, amount=amount_dec, currency=debt.currency, payment_method_id=payment_method_id, date=payment_date, note=note)
         self.recalculate_debt(debt)
         AuditLogService(self.session).record("add debt payment", "Debt", debt.id, new_value={"amount": str(amount_dec)})

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QDate, Qt
-from PySide6.QtWidgets import QComboBox, QDateEdit, QDoubleSpinBox, QFormLayout, QHBoxLayout, QInputDialog, QLabel, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QDateEdit, QDialog, QDoubleSpinBox, QFormLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QTableWidgetItem, QVBoxLayout, QWidget
 
 from app.core.database import session_scope
 from app.models.debt import DebtDirection
 from app.services.debt_service import DebtService
 from app.services.person_service import PersonService
+from app.ui.events import events
 from app.ui.helpers import qdate_to_date, show_error, spinbox_money
-from app.ui.widgets import ModernTable, PrimaryButton, SecondaryButton, SectionCard
+from app.ui.widgets import FormDialog, ModernTable, PrimaryButton, SecondaryButton, SectionCard
 from app.utils.money import money, validate_money_input
 
 
@@ -64,6 +65,8 @@ class DebtsPage(QWidget):
         layout.addWidget(debt_card, 1)
         layout.addWidget(payment_card, 1)
         self.refresh()
+        events.people_changed.connect(self.refresh)
+        events.settings_changed.connect(self.refresh)
 
     def refresh(self) -> None:
         with session_scope() as session:
@@ -107,6 +110,7 @@ class DebtsPage(QWidget):
                 )
             self.amount.setValue(0)
             self.refresh()
+            events.debts_changed.emit()
         except Exception as exc:
             show_error(self, "Debt not saved", exc)
 
@@ -129,6 +133,7 @@ class DebtsPage(QWidget):
                     is_debtor=direction == DebtDirection.HE_OWES_ME,
                 )
             self._reload_people()
+            events.people_changed.emit()
         except Exception as exc:
             show_error(self, "Person not saved", exc)
 
@@ -140,12 +145,29 @@ class DebtsPage(QWidget):
         debt_id = int(self.table.item(row, 0).text())
         remaining_text = self.table.item(row, 4).text().split()[0].replace(",", "")
         default_value = "1.00" if validate_money_input(remaining_text) > validate_money_input("1.00") else remaining_text
-        value, ok = QInputDialog.getText(self, "Register payment", "Amount", text=default_value)
-        if not ok:
+        dialog = FormDialog("Register payment", self)
+        form = QFormLayout()
+        amount = QLineEdit(default_value)
+        payment = QComboBox()
+        payment.addItem("None", None)
+        with session_scope() as session:
+            for method in DebtService(session).payment_methods():
+                payment.addItem(method.name, method.id)
+        form.addRow("Amount", amount)
+        form.addRow("Payment", payment)
+        dialog.content.addLayout(form)
+        cancel = SecondaryButton("Cancel")
+        save = PrimaryButton("Save")
+        cancel.clicked.connect(dialog.reject)
+        save.clicked.connect(dialog.accept)
+        dialog.actions.addWidget(cancel)
+        dialog.actions.addWidget(save)
+        if dialog.exec() != QDialog.Accepted:
             return
         try:
             with session_scope() as session:
-                DebtService(session).register_payment(debt_id, validate_money_input(value), qdate_to_date(QDate.currentDate()))
+                DebtService(session).register_payment(debt_id, validate_money_input(amount.text()), qdate_to_date(QDate.currentDate()), payment_method_id=payment.currentData())
             self.refresh()
+            events.debts_changed.emit()
         except Exception as exc:
             show_error(self, "Payment not registered", exc)

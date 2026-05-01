@@ -49,6 +49,9 @@ class PersonRepository:
     def get_house_members(self) -> list[Person]:
         return list(self.session.scalars(select(Person).where(Person.is_active.is_(True), Person.is_house_member.is_(True)).order_by(Person.name)))
 
+    def get_employers(self) -> list[Person]:
+        return list(self.session.scalars(select(Person).where(Person.is_active.is_(True), Person.is_employer.is_(True)).order_by(Person.name)))
+
     def existing_active_ids(self, person_ids: list[int]) -> set[int]:
         return set(self.session.scalars(select(Person.id).where(Person.id.in_(person_ids), Person.is_active.is_(True))).all())
 
@@ -63,6 +66,10 @@ class PersonRepository:
             stmt = stmt.where(Person.is_debtor.is_(True))
         elif role_filter == "House members":
             stmt = stmt.where(Person.is_house_member.is_(True))
+        elif role_filter == "Employers":
+            stmt = stmt.where(Person.is_employer.is_(True))
+        elif role_filter == "Service providers":
+            stmt = stmt.where(Person.is_service_provider.is_(True))
         elif role_filter == "Active":
             stmt = stmt.where(Person.is_active.is_(True))
         elif role_filter == "Inactive":

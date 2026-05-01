@@ -106,6 +106,20 @@ After installation, launch the app from the desktop menu as **Personal Ledger Pr
 personal-ledger-pro
 ```
 
+## Upgrading Without Losing Data
+
+Personal Ledger Pro keeps app code and user data separate. Installing a newer launcher, desktop entry, or source checkout must not replace the local SQLite database in `data/personal_ledger.sqlite3`, nor files in `backups/`, exports, or reports.
+
+On startup, the app applies only safe schema updates: creating missing tables, adding missing columns, adding indexes, and seeding missing default settings. Startup migrations must not drop tables, truncate tables, delete rows, or replace the database file.
+
+Before applying schema updates to an existing SQLite database, the app creates a timestamped safety backup in `backups/` named like:
+
+```text
+personal_ledger_pre_migration_YYYYMMDD_HHMMSS.sqlite3
+```
+
+If startup migration fails, the app restores the pre-migration backup and shows a clear database upgrade error instead of continuing with a partially upgraded database. To upgrade manually, install the new app files over the old app files, leave `data/` and `backups/` untouched, then launch the app normally.
+
 ## Default Login Credentials
 
 The default first-run credentials are:

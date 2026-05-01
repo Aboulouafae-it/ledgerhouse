@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from app.core.database import session_scope
 from app.services.shared_living_service import SharedLivingService
+from app.ui.events import events
 from app.ui.helpers import qdate_to_date, show_error, spinbox_money
 from app.ui.widgets import FormDialog, ModernTable, PrimaryButton, SecondaryButton, SectionCard, StatCard
 from app.utils.money import money
@@ -50,11 +51,15 @@ class SharedLivingPage(QWidget):
         self.amount.setMaximum(1_000_000)
         self.amount.setDecimals(2)
         self.payer = QComboBox()
+        self.category = QComboBox()
+        self.payment = QComboBox()
         self.date = QDateEdit(QDate.currentDate())
         self.date.setCalendarPopup(True)
         form.addRow("Title", self.title)
         form.addRow("Amount", self.amount)
         form.addRow("Paid by", self.payer)
+        form.addRow("Category", self.category)
+        form.addRow("Payment", self.payment)
         form.addRow("Date", self.date)
         members_box = QGroupBox("Participants")
         members_box.setMaximumHeight(132)
@@ -88,6 +93,10 @@ class SharedLivingPage(QWidget):
         lower.addWidget(settlements_card, 2)
         layout.addLayout(lower, 1)
         self.refresh()
+        events.people_changed.connect(self.refresh)
+        events.categories_changed.connect(self.refresh)
+        events.payment_methods_changed.connect(self.refresh)
+        events.settings_changed.connect(self.refresh)
 
     def refresh(self) -> None:
         with session_scope() as session:
@@ -100,6 +109,14 @@ class SharedLivingPage(QWidget):
             for person in service.active_people():
                 if person.id not in member_ids:
                     self.payer.addItem(f"{person.name} (other)", person.id)
+            self.category.clear()
+            self.category.addItem("None", None)
+            for category in service.shared_categories():
+                self.category.addItem(category.name, category.id)
+            self.payment.clear()
+            self.payment.addItem("None", None)
+            for method in service.payment_methods():
+                self.payment.addItem(method.name, method.id)
             while self.members_layout.count():
                 item = self.members_layout.takeAt(0)
                 if item.widget():
@@ -143,10 +160,13 @@ class SharedLivingPage(QWidget):
                     paid_by_person_id=self.payer.currentData(),
                     participant_ids=participant_ids,
                     date_=qdate_to_date(self.date.date()),
+                    category_id=self.category.currentData(),
+                    payment_method_id=self.payment.currentData(),
                 )
             self.title.clear()
             self.amount.setValue(0)
             self.refresh()
+            events.shared_living_changed.emit()
         except Exception as exc:
             show_error(self, "Shared expense not saved", exc)
 
@@ -184,6 +204,7 @@ class SharedLivingPage(QWidget):
             with session_scope() as session:
                 SharedLivingService(session).delete_expense(expense_id)
             self.refresh()
+            events.shared_living_changed.emit()
         except Exception as exc:
             show_error(self, "Shared expense not deleted", exc)
 
@@ -196,12 +217,16 @@ class SharedLivingPage(QWidget):
                 active_people = service.active_people()
                 data = {
                     "title": expense.title,
-                    "amount": float(expense.amount),
+                    "amount": str(expense.amount),
                     "paid_by_person_id": expense.paid_by_person_id,
+                    "category_id": expense.category_id,
+                    "payment_method_id": expense.payment_method_id,
                     "date": expense.date,
                     "participants": {participant.person_id for participant in expense.participants if participant.share_amount > 0},
                     "members": [(person.id, person.name) for person in members],
                     "payers": [(person.id, person.name) for person in active_people],
+                    "categories": [(category.id, category.name) for category in service.shared_categories()],
+                    "payment_methods": [(method.id, method.name) for method in service.payment_methods()],
                 }
         except Exception as exc:
             show_error(self, "Shared expense not loaded", exc)
@@ -210,19 +235,28 @@ class SharedLivingPage(QWidget):
         dialog.resize(540, 460)
         form = QFormLayout()
         title = QLineEdit(data["title"])
-        amount = QDoubleSpinBox()
-        amount.setMaximum(1_000_000)
-        amount.setDecimals(2)
-        amount.setValue(data["amount"])
+        amount = QLineEdit(data["amount"])
         payer = QComboBox()
         for person_id, name in data["payers"]:
             payer.addItem(name, person_id)
         payer.setCurrentIndex(max(0, payer.findData(data["paid_by_person_id"])))
+        category = QComboBox()
+        category.addItem("None", None)
+        for category_id, name in data["categories"]:
+            category.addItem(name, category_id)
+        category.setCurrentIndex(max(0, category.findData(data["category_id"])))
+        payment = QComboBox()
+        payment.addItem("None", None)
+        for method_id, name in data["payment_methods"]:
+            payment.addItem(name, method_id)
+        payment.setCurrentIndex(max(0, payment.findData(data["payment_method_id"])))
         date_edit = QDateEdit(QDate(data["date"].year, data["date"].month, data["date"].day))
         date_edit.setCalendarPopup(True)
         form.addRow("Title", title)
         form.addRow("Amount", amount)
         form.addRow("Paid by", payer)
+        form.addRow("Category", category)
+        form.addRow("Payment", payment)
         form.addRow("Date", date_edit)
         participants_box = QGroupBox("Participants")
         participants_layout = QVBoxLayout(participants_box)
@@ -249,12 +283,15 @@ class SharedLivingPage(QWidget):
                 SharedLivingService(session).update_equal_expense(
                     expense_id,
                     title=title.text().strip(),
-                    amount=spinbox_money(amount.value()),
+                    amount=amount.text().strip(),
                     paid_by_person_id=payer.currentData(),
                     participant_ids=participant_ids,
                     date_=qdate_to_date(date_edit.date()),
+                    category_id=category.currentData(),
+                    payment_method_id=payment.currentData(),
                 )
             self.refresh()
+            events.shared_living_changed.emit()
         except Exception as exc:
             show_error(self, "Shared expense not updated", exc)
 

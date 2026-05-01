@@ -6,6 +6,10 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.models.person import Person
+from app.models.category import Category, CategoryType
+from app.models.payment_method import PaymentMethod
+from app.repositories.category_repository import CategoryRepository
+from app.repositories.payment_method_repository import PaymentMethodRepository
 from app.models.shared_expense import SharedExpense, SplitType
 from app.models.shared_expense_participant import SharedExpenseParticipant
 from app.repositories.person_repository import PersonRepository
@@ -23,6 +27,8 @@ class SharedLivingService:
         self.session = session
         self.settlement_service = SettlementService()
         self.people_repo = PersonRepository(session)
+        self.category_repo = CategoryRepository(session)
+        self.payment_repo = PaymentMethodRepository(session)
         self.repo = SharedExpenseRepository(session)
 
     def house_members(self) -> list[Person]:
@@ -30,6 +36,12 @@ class SharedLivingService:
 
     def active_people(self) -> list[Person]:
         return sorted(self.people_repo.get_active_people(), key=lambda person: (not person.is_house_member, person.name))
+
+    def shared_categories(self) -> list[Category]:
+        return self.category_repo.get_active_by_type([CategoryType.SHARED, CategoryType.EXPENSE])
+
+    def payment_methods(self) -> list[PaymentMethod]:
+        return self.payment_repo.get_active_methods()
 
     def list_expenses(self) -> list[SharedExpense]:
         return self.repo.list_expenses()
@@ -51,6 +63,7 @@ class SharedLivingService:
         category_id: int | None = None,
         note: str | None = None,
         payment_method_id: int | None = None,
+        currency: str | None = None,
     ) -> SharedExpense:
         amount_dec = validate_positive_money(amount)
         title = title.strip()
@@ -65,10 +78,22 @@ class SharedLivingService:
         payer = self.people_repo.get_by_id(paid_by_person_id)
         if payer is None or not payer.is_active:
             raise NotFoundError("Payer not found.")
+        if category_id is not None:
+            category = self.category_repo.get_by_id(category_id)
+            if category is None or not category.is_active or category.type not in {CategoryType.SHARED, CategoryType.EXPENSE}:
+                raise NotFoundError("Shared category not found.")
+        if payment_method_id is not None:
+            method = self.payment_repo.get_by_id(payment_method_id)
+            if method is None or not method.is_active:
+                raise NotFoundError("Payment method not found.")
+        currency_code = (currency or SettingsService(self.session).get("default_currency", "EUR")).strip().upper()
+        if len(currency_code) != 3 or not currency_code.isalpha():
+            raise ValidationError("Currency must be a 3-letter code.")
         shares = equal_split(amount_dec, len(participant_ids))
         expense = self.repo.create_shared_expense(
             title=title,
             amount=amount_dec,
+            currency=currency_code,
             paid_by_person_id=paid_by_person_id,
             category_id=category_id,
             payment_method_id=payment_method_id,
@@ -106,6 +131,8 @@ class SharedLivingService:
         participant_ids: list[int],
         date_: date,
         note: str | None = None,
+        category_id: int | None = None,
+        payment_method_id: int | None = None,
     ) -> SharedExpense:
         expense = self.get_expense(expense_id)
         self.repo.delete_expense(expense)
@@ -116,6 +143,8 @@ class SharedLivingService:
             participant_ids=participant_ids,
             date_=date_,
             note=note,
+            category_id=category_id,
+            payment_method_id=payment_method_id,
         )
         AuditLogService(self.session).record("update shared expense", "SharedExpense", updated.id, old_value={"id": expense_id}, new_value={"title": title})
         return updated
@@ -153,16 +182,16 @@ class SharedLivingService:
             "participated_items": participated_items,
         }
 
-    def balances(self) -> dict[str, Decimal]:
+    def balances(self, expenses: list[SharedExpense] | None = None) -> dict[str, Decimal]:
         totals: dict[str, Decimal] = {}
-        for expense in self.list_expenses():
+        for expense in expenses if expenses is not None else self.list_expenses():
             for participant in expense.participants:
                 totals[participant.person.name] = totals.get(participant.person.name, Decimal("0.00")) + participant.balance
         return {name: to_decimal(value) for name, value in totals.items()}
 
-    def balance_by_person_id(self) -> dict[int, Decimal]:
+    def balance_by_person_id(self, expenses: list[SharedExpense] | None = None) -> dict[int, Decimal]:
         totals: dict[int, Decimal] = {}
-        for expense in self.list_expenses():
+        for expense in expenses if expenses is not None else self.list_expenses():
             for participant in expense.participants:
                 totals[participant.person_id] = totals.get(participant.person_id, Decimal("0.00")) + participant.balance
         return {person_id: to_decimal(value) for person_id, value in totals.items()}
@@ -173,11 +202,14 @@ class SharedLivingService:
             return Decimal("0.00")
         return self.balance_by_person_id().get(owner_id, Decimal("0.00"))
 
-    def summary(self) -> dict[str, Decimal]:
+    def summary(self, expenses: list[SharedExpense] | None = None) -> dict[str, Decimal]:
         owner_balance = self.owner_balance()
+        if expenses is not None:
+            owner_id = SettingsService(self.session).owner_person_id()
+            owner_balance = self.balance_by_person_id(expenses).get(owner_id, Decimal("0.00")) if owner_id is not None else Decimal("0.00")
         receivable = owner_balance if owner_balance > 0 else Decimal("0.00")
         payable = -owner_balance if owner_balance < 0 else Decimal("0.00")
         return {"receivable": to_decimal(receivable), "payable": to_decimal(payable)}
 
-    def settlements(self) -> list[Settlement]:
-        return self.settlement_service.optimize(self.balances())
+    def settlements(self, expenses: list[SharedExpense] | None = None) -> list[Settlement]:
+        return self.settlement_service.optimize(self.balances(expenses))
